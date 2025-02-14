@@ -36,8 +36,14 @@ namespace MinecraftModUpdater
 
                     foreach (JsonElement file in json.RootElement.EnumerateArray())
                     {
-                        string fileName = file.GetProperty("name").GetString();
-                        string filePath = file.GetProperty("path").GetString();
+                        if (!file.TryGetProperty("name", out JsonElement fileNameElement) ||
+                            !file.TryGetProperty("path", out JsonElement filePathElement))
+                        {
+                            continue;
+                        }
+
+                        string fileName = fileNameElement.GetString();
+                        string filePath = filePathElement.GetString();
                         DateTime lastCommitDate = await GetLastCommitDateAsync(filePath);
 
                         if (fileName.EndsWith(".jar"))
@@ -66,16 +72,25 @@ namespace MinecraftModUpdater
                     string jsonResponse = await response.Content.ReadAsStringAsync();
                     JsonDocument json = JsonDocument.Parse(jsonResponse);
 
-                    JsonElement commit = json.RootElement[0];
-                    string dateStr = commit.GetProperty("commit").GetProperty("committer").GetProperty("date").GetString();
+                    // ✅ Используем `.GetArrayLength() > 0` вместо `.Any()`
+                    if (json.RootElement.GetArrayLength() == 0)
+                        return DateTime.MinValue;
 
-                    return DateTime.Parse(dateStr).ToUniversalTime();
+                    JsonElement commit = json.RootElement[0];
+                    if (commit.TryGetProperty("commit", out JsonElement commitElement) &&
+                        commitElement.TryGetProperty("committer", out JsonElement committerElement) &&
+                        committerElement.TryGetProperty("date", out JsonElement dateElement))
+                    {
+                        return DateTime.Parse(dateElement.GetString()).ToUniversalTime();
+                    }
                 }
             }
             catch (Exception)
             {
-                return DateTime.MinValue; // Если ошибка, считаем, что файла нет
+                return DateTime.MinValue;
             }
+
+            return DateTime.MinValue;
         }
 
         public static async Task UpdateModsAsync(ListView listView)
