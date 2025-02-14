@@ -11,6 +11,7 @@ namespace MinecraftModUpdater
     class ModUpdater
     {
         private static readonly HttpClient httpClient = new HttpClient();
+        private const string GitHubToken = "your_personal_access_token_here"; // 🔥 ВСТАВЬ СВОЙ API TOKEN СЮДА
         private const string RepoApiUrl = "https://api.github.com/repos/kekstm989/Launcher/contents/MinecraftModUpdater/Mods";
         private const string RepoRawUrl = "https://github.com/kekstm989/Launcher/raw/main/MinecraftModUpdater/Mods/";
 
@@ -33,6 +34,8 @@ namespace MinecraftModUpdater
             try
             {
                 httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("MinecraftModUpdater");
+                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", GitHubToken); // ✅ Добавляем токен
+
                 using (HttpResponseMessage response = await httpClient.GetAsync(RepoApiUrl))
                 {
                     response.EnsureSuccessStatusCode();
@@ -57,9 +60,13 @@ namespace MinecraftModUpdater
                     }
                 }
             }
+            catch (HttpRequestException ex)
+            {
+                MessageBox.Show($"Ошибка сети при получении списка модов: {ex.Message}", "Ошибка сети", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при получении списка модов: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Ошибка при обработке JSON: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
             return modFiles;
@@ -154,6 +161,10 @@ namespace MinecraftModUpdater
                 }
 
                 listItem.SubItems[1].Text = "Готово";
+            }
+            catch (HttpRequestException ex)
+            {
+                MessageBox.Show($"Ошибка сети при загрузке {url}: {ex.Message}", "Ошибка сети", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
