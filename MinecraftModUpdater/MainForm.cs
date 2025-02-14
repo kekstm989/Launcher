@@ -9,29 +9,12 @@ namespace MinecraftModUpdater
         public MainForm()
         {
             InitializeComponent();
-            this.Load += async (s, e) => await CheckForUpdateOnStartAsync();
-        }
-
-        private async Task CheckForUpdateOnStartAsync()
-        {
-            lblStatus.Text = "Проверка обновлений...";
-            bool isUpdateAvailable = await Updater.CheckForUpdateAsync();
-            if (isUpdateAvailable)
-            {
-                lblStatus.Text = "Обновление...";
-                await Updater.UpdateLauncherAsync(progressBar);
-            }
-            else
-            {
-                lblStatus.Text = "У вас последняя версия.";
-            }
         }
 
         private async void btnUpdateMods_Click(object sender, EventArgs e)
         {
-            lblStatus.Text = "Обновление модов...";
-            await ModUpdater.UpdateModsAsync();
-            lblStatus.Text = "Обновление завершено!";
+            listViewMods.Items.Clear();
+            await ModUpdater.UpdateModsAsync(listViewMods);
             MessageBox.Show("Обновление завершено!", "Minecraft Mod Updater", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
