@@ -3,12 +3,14 @@
     partial class MainForm
     {
         private System.Windows.Forms.Button btnUpdateMods;
-        private System.Windows.Forms.Button btnUpdateLauncher;
+        private System.Windows.Forms.Label lblStatus;
+        private System.Windows.Forms.ProgressBar progressBar;
 
         private void InitializeComponent()
         {
             this.btnUpdateMods = new System.Windows.Forms.Button();
-            this.btnUpdateLauncher = new System.Windows.Forms.Button();
+            this.lblStatus = new System.Windows.Forms.Label();
+            this.progressBar = new System.Windows.Forms.ProgressBar();
             this.SuspendLayout();
 
             // 
@@ -23,22 +25,29 @@
             this.btnUpdateMods.Click += new System.EventHandler(this.btnUpdateMods_Click);
 
             // 
-            // btnUpdateLauncher
+            // lblStatus
             // 
-            this.btnUpdateLauncher.Location = new System.Drawing.Point(50, 70);
-            this.btnUpdateLauncher.Name = "btnUpdateLauncher";
-            this.btnUpdateLauncher.Size = new System.Drawing.Size(150, 30);
-            this.btnUpdateLauncher.TabIndex = 1;
-            this.btnUpdateLauncher.Text = "Обновить лаунчер";
-            this.btnUpdateLauncher.UseVisualStyleBackColor = true;
-            this.btnUpdateLauncher.Click += new System.EventHandler(this.btnUpdateLauncher_Click);
+            this.lblStatus.Location = new System.Drawing.Point(50, 70);
+            this.lblStatus.Name = "lblStatus";
+            this.lblStatus.Size = new System.Drawing.Size(150, 20);
+            this.lblStatus.TabIndex = 1;
+            this.lblStatus.Text = "Готово";
+
+            // 
+            // progressBar
+            // 
+            this.progressBar.Location = new System.Drawing.Point(50, 100);
+            this.progressBar.Name = "progressBar";
+            this.progressBar.Size = new System.Drawing.Size(150, 20);
+            this.progressBar.TabIndex = 2;
 
             // 
             // MainForm
             // 
-            this.ClientSize = new System.Drawing.Size(250, 120);
+            this.ClientSize = new System.Drawing.Size(250, 140);
             this.Controls.Add(this.btnUpdateMods);
-            this.Controls.Add(this.btnUpdateLauncher);
+            this.Controls.Add(this.lblStatus);
+            this.Controls.Add(this.progressBar);
             this.Name = "MainForm";
             this.Text = "Minecraft Mod Updater";
             this.ResumeLayout(false);
