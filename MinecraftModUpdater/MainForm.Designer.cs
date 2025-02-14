@@ -48,6 +48,11 @@ namespace MinecraftModUpdater
             this.lblTitle.Text = "Minecraft Mod Updater";
             this.lblTitle.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 
+            // ✅ Добавляем поддержку перемещения окна без рамки
+            this.lblTitle.MouseDown += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseDown);
+            this.lblTitle.MouseMove += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseMove);
+            this.lblTitle.MouseUp += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseUp);
+
             // 
             // listViewMods
             // 
@@ -95,6 +100,10 @@ namespace MinecraftModUpdater
             this.btnUpdateMods.TabIndex = 2;
             this.btnUpdateMods.Click += new System.EventHandler(this.btnUpdateMods_Click);
 
+            // ✅ Добавляем анимацию при наведении на кнопку
+            this.btnUpdateMods.MouseEnter += new System.EventHandler(this.Button_MouseEnter);
+            this.btnUpdateMods.MouseLeave += new System.EventHandler(this.Button_MouseLeave);
+
             // 
             // btnClose
             // 
@@ -107,6 +116,10 @@ namespace MinecraftModUpdater
             this.btnClose.Size = new System.Drawing.Size(150, 30);
             this.btnClose.TabIndex = 3;
             this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
+
+            // ✅ Добавляем анимацию при наведении на кнопку
+            this.btnClose.MouseEnter += new System.EventHandler(this.Button_MouseEnter);
+            this.btnClose.MouseLeave += new System.EventHandler(this.Button_MouseLeave);
 
             // 
             // progressBar
