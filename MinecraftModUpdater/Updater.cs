@@ -48,6 +48,7 @@ namespace MinecraftModUpdater
             {
                 string localFile = Application.ExecutablePath;
                 string tempFile = localFile + ".new";
+                string backupFile = localFile + ".bak";
 
                 using (HttpResponseMessage response = await httpClient.GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead))
                 {
@@ -77,10 +78,21 @@ namespace MinecraftModUpdater
                     }
                 }
 
-                string backupFile = localFile + ".bak";
-                if (File.Exists(backupFile)) File.Delete(backupFile);
+                // Удаляем старый backup, если он остался от предыдущих обновлений
+                if (File.Exists(backupFile))
+                {
+                    File.Delete(backupFile);
+                }
+
+                // Создаём резервную копию текущего .exe перед заменой
                 File.Move(localFile, backupFile);
                 File.Move(tempFile, localFile);
+
+                // Удаляем .bak после успешного обновления
+                if (File.Exists(backupFile))
+                {
+                    File.Delete(backupFile);
+                }
 
                 MessageBox.Show("Обновление завершено! Перезапуск лаунчера.", "Обновление", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Process.Start(localFile);
