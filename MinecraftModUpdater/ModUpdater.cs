@@ -12,7 +12,6 @@ namespace MinecraftModUpdater
     {
         private static readonly HttpClient httpClient = new HttpClient();
         private const string RepoApiUrl = "https://api.github.com/repos/kekstm989/Launcher/contents/MinecraftModUpdater/Mods";
-        private const string RepoCommitsUrl = "https://api.github.com/repos/kekstm989/Launcher/commits?path=MinecraftModUpdater/Mods/";
         private const string RepoRawUrl = "https://github.com/kekstm989/Launcher/raw/main/MinecraftModUpdater/Mods/";
 
         private static string GetModsFolderPath()
@@ -21,9 +20,15 @@ namespace MinecraftModUpdater
             return Path.Combine(userPath, ".minecraft", "mods");
         }
 
-        private static async Task<Dictionary<string, DateTime>> GetModListFromRepoAsync()
+        private static string GetCacheFolderPath()
         {
-            Dictionary<string, DateTime> modFiles = new Dictionary<string, DateTime>();
+            string userPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            return Path.Combine(userPath, ".minecraft", "mods_cache");
+        }
+
+        private static async Task<Dictionary<string, string>> GetModListFromRepoAsync()
+        {
+            Dictionary<string, string> modFiles = new Dictionary<string, string>();
 
             try
             {
@@ -37,18 +42,17 @@ namespace MinecraftModUpdater
                     foreach (JsonElement file in json.RootElement.EnumerateArray())
                     {
                         if (!file.TryGetProperty("name", out JsonElement fileNameElement) ||
-                            !file.TryGetProperty("path", out JsonElement filePathElement))
+                            !file.TryGetProperty("sha", out JsonElement fileShaElement))
                         {
                             continue;
                         }
 
                         string fileName = fileNameElement.GetString();
-                        string filePath = filePathElement.GetString();
-                        DateTime lastCommitDate = await GetLastCommitDateAsync(filePath);
+                        string fileSha = fileShaElement.GetString();
 
                         if (fileName.EndsWith(".jar"))
                         {
-                            modFiles[fileName] = lastCommitDate;
+                            modFiles[fileName] = fileSha;
                         }
                     }
                 }
@@ -61,46 +65,18 @@ namespace MinecraftModUpdater
             return modFiles;
         }
 
-        private static async Task<DateTime> GetLastCommitDateAsync(string filePath)
-        {
-            try
-            {
-                string apiUrl = $"{RepoCommitsUrl}{filePath}";
-                using (HttpResponseMessage response = await httpClient.GetAsync(apiUrl))
-                {
-                    response.EnsureSuccessStatusCode();
-                    string jsonResponse = await response.Content.ReadAsStringAsync();
-                    JsonDocument json = JsonDocument.Parse(jsonResponse);
-
-                    // ✅ Используем `.GetArrayLength() > 0` вместо `.Any()`
-                    if (json.RootElement.GetArrayLength() == 0)
-                        return DateTime.MinValue;
-
-                    JsonElement commit = json.RootElement[0];
-                    if (commit.TryGetProperty("commit", out JsonElement commitElement) &&
-                        commitElement.TryGetProperty("committer", out JsonElement committerElement) &&
-                        committerElement.TryGetProperty("date", out JsonElement dateElement))
-                    {
-                        return DateTime.Parse(dateElement.GetString()).ToUniversalTime();
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                return DateTime.MinValue;
-            }
-
-            return DateTime.MinValue;
-        }
-
         public static async Task UpdateModsAsync(ListView listView)
         {
             string modsFolder = GetModsFolderPath();
+            string cacheFolder = GetCacheFolderPath();
 
             if (!Directory.Exists(modsFolder))
                 Directory.CreateDirectory(modsFolder);
 
-            Dictionary<string, DateTime> repoMods = await GetModListFromRepoAsync();
+            if (!Directory.Exists(cacheFolder))
+                Directory.CreateDirectory(cacheFolder);
+
+            Dictionary<string, string> repoMods = await GetModListFromRepoAsync();
 
             // ✅ Очищаем `listView`, чтобы не дублировать моды
             listView.Items.Clear();
@@ -108,10 +84,17 @@ namespace MinecraftModUpdater
             foreach (var mod in repoMods)
             {
                 string modName = mod.Key;
-                DateTime remoteCommitDate = mod.Value;
+                string remoteSha = mod.Value;
                 string localFilePath = Path.Combine(modsFolder, modName);
+                string cacheFilePath = Path.Combine(cacheFolder, modName + ".sha");
 
-                bool needsUpdate = !File.Exists(localFilePath) || File.GetLastWriteTimeUtc(localFilePath) < remoteCommitDate;
+                bool needsUpdate = true;
+
+                if (File.Exists(localFilePath) && File.Exists(cacheFilePath))
+                {
+                    string localSha = File.ReadAllText(cacheFilePath).Trim();
+                    needsUpdate = !localSha.Equals(remoteSha);
+                }
 
                 ListViewItem item = new ListViewItem(modName);
                 item.SubItems.Add(needsUpdate ? "Требует обновления" : "Актуальная версия");
@@ -134,7 +117,7 @@ namespace MinecraftModUpdater
                     }
 
                     await DownloadModAsync(RepoRawUrl + modName, localFilePath, item);
-                    File.SetLastWriteTimeUtc(localFilePath, remoteCommitDate); // ✅ Устанавливаем дату файла под `Last commit date`
+                    File.WriteAllText(cacheFilePath, remoteSha); // ✅ Обновляем SHA после загрузки
                 }
             }
         }
