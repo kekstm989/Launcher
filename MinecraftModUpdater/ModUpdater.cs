@@ -11,7 +11,8 @@ namespace MinecraftModUpdater
     class ModUpdater
     {
         private static readonly HttpClient httpClient = new HttpClient();
-        private const string RepoApiUrl = "https://api.github.com/repos/kekstm989/Launcher/commits?path=MinecraftModUpdater/Mods";
+        private const string RepoApiUrl = "https://api.github.com/repos/kekstm989/Launcher/contents/MinecraftModUpdater/Mods";
+        private const string RepoCommitsUrl = "https://api.github.com/repos/kekstm989/Launcher/commits?path=MinecraftModUpdater/Mods/";
         private const string RepoRawUrl = "https://github.com/kekstm989/Launcher/raw/main/MinecraftModUpdater/Mods/";
 
         private static string GetModsFolderPath()
@@ -33,12 +34,12 @@ namespace MinecraftModUpdater
                     string jsonResponse = await response.Content.ReadAsStringAsync();
                     JsonDocument json = JsonDocument.Parse(jsonResponse);
 
-                    foreach (JsonElement commit in json.RootElement.EnumerateArray())
+                    foreach (JsonElement file in json.RootElement.EnumerateArray())
                     {
-                        string filePath = commit.GetProperty("files")[0].GetProperty("filename").GetString();
-                        DateTime lastCommitDate = commit.GetProperty("commit").GetProperty("committer").GetProperty("date").GetDateTime();
+                        string fileName = file.GetProperty("name").GetString();
+                        string filePath = file.GetProperty("path").GetString();
+                        DateTime lastCommitDate = await GetLastCommitDateAsync(filePath);
 
-                        string fileName = Path.GetFileName(filePath);
                         if (fileName.EndsWith(".jar"))
                         {
                             modFiles[fileName] = lastCommitDate;
@@ -52,6 +53,29 @@ namespace MinecraftModUpdater
             }
 
             return modFiles;
+        }
+
+        private static async Task<DateTime> GetLastCommitDateAsync(string filePath)
+        {
+            try
+            {
+                string apiUrl = $"{RepoCommitsUrl}{filePath}";
+                using (HttpResponseMessage response = await httpClient.GetAsync(apiUrl))
+                {
+                    response.EnsureSuccessStatusCode();
+                    string jsonResponse = await response.Content.ReadAsStringAsync();
+                    JsonDocument json = JsonDocument.Parse(jsonResponse);
+
+                    JsonElement commit = json.RootElement[0];
+                    string dateStr = commit.GetProperty("commit").GetProperty("committer").GetProperty("date").GetString();
+
+                    return DateTime.Parse(dateStr).ToUniversalTime();
+                }
+            }
+            catch (Exception)
+            {
+                return DateTime.MinValue; // Если ошибка, считаем, что файла нет
+            }
         }
 
         public static async Task UpdateModsAsync(ListView listView)
