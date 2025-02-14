@@ -1,16 +1,21 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace MinecraftModUpdater
 {
     public partial class MainForm : Form
     {
+        private Timer fadeInTimer;
+        private Timer fadeOutTimer;
+
         public MainForm()
         {
             InitializeComponent();
             this.Opacity = 0;
+            this.Icon = new Icon("MinecraftModUpdater/Resources/logo.png"); // ✅ Устанавливаем кастомную иконку
             InitFadeIn();
         }
 
@@ -18,6 +23,7 @@ namespace MinecraftModUpdater
         {
             lblTitle.Text = "Обновление модов...";
             progressBar.Visible = true;
+            await AnimateProgressBar(100);
             await ModUpdater.UpdateModsAsync(listViewMods);
             progressBar.Visible = false;
             lblTitle.Text = "Minecraft Mod Updater";
@@ -26,7 +32,7 @@ namespace MinecraftModUpdater
 
         private void btnClose_Click(object sender, EventArgs e)
         {
-            Application.Exit();
+            StartFadeOut(); // ✅ При закрытии окна теперь плавное исчезновение
         }
 
         private void MainForm_Paint(object sender, PaintEventArgs e)
@@ -41,9 +47,10 @@ namespace MinecraftModUpdater
             }
         }
 
+        // ✅ Анимация появления (Fade In)
         private void InitFadeIn()
         {
-            Timer fadeInTimer = new Timer();
+            fadeInTimer = new Timer();
             fadeInTimer.Interval = 10;
             fadeInTimer.Tick += (s, e) =>
             {
@@ -57,6 +64,37 @@ namespace MinecraftModUpdater
                 }
             };
             fadeInTimer.Start();
+        }
+
+        // ✅ Анимация закрытия (Fade Out)
+        private void StartFadeOut()
+        {
+            fadeOutTimer = new Timer();
+            fadeOutTimer.Interval = 10;
+            fadeOutTimer.Tick += (s, e) =>
+            {
+                if (this.Opacity > 0)
+                {
+                    this.Opacity -= 0.05;
+                }
+                else
+                {
+                    fadeOutTimer.Stop();
+                    Application.Exit();
+                }
+            };
+            fadeOutTimer.Start();
+        }
+
+        // ✅ Анимация заполнения ProgressBar
+        private async Task AnimateProgressBar(int targetValue)
+        {
+            int step = 2;
+            while (progressBar.Value < targetValue)
+            {
+                progressBar.Value += step;
+                await Task.Delay(20);
+            }
         }
     }
 }
