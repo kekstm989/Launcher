@@ -85,7 +85,7 @@ namespace MinecraftModUpdater
             // columnProgress
             // 
             this.columnProgress.Text = "Прогресс";
-            this.columnProgress.Width = 150;
+            this.columnProgress.Width = 120;
 
             // 
             // btnUpdateMods
