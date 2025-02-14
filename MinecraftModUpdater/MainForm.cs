@@ -1,7 +1,6 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -16,18 +15,8 @@ namespace MinecraftModUpdater
         {
             InitializeComponent();
             this.Opacity = 0;
-            SetCustomIcon(); // ✅ Используем правильный путь к иконке
+            this.Icon = new Icon("icon.ico"); // ✅ Устанавливаем кастомную иконку
             InitFadeIn();
-        }
-
-        private void SetCustomIcon()
-        {
-            string iconPath = Path.Combine(Directory.GetCurrentDirectory(), "MinecraftModUpdater", "Resources", "logo.ico"); // ✅ Исправленный путь
-            
-            if (File.Exists(iconPath))
-            {
-                this.Icon = new Icon(iconPath);
-            }
         }
 
         private async void btnUpdateMods_Click(object sender, EventArgs e)
@@ -43,7 +32,7 @@ namespace MinecraftModUpdater
 
         private void btnClose_Click(object sender, EventArgs e)
         {
-            StartFadeOut(); // ✅ Плавное исчезновение
+            StartFadeOut(); // ✅ При закрытии окна теперь плавное исчезновение
         }
 
         private void MainForm_Paint(object sender, PaintEventArgs e)
