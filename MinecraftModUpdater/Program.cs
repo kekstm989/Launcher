@@ -11,12 +11,12 @@ namespace MinecraftModUpdater
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Сначала запускаем окно обновления лаунчера
+            // Запускаем `UpdateForm`
             using (UpdateForm updateForm = new UpdateForm())
             {
                 if (updateForm.ShowDialog() == DialogResult.OK)
                 {
-                    // После успешного обновления запускаем MainForm
+                    // После `Fade Out` открываем `MainForm`
                     Application.Run(new MainForm());
                 }
             }

@@ -10,6 +10,7 @@ namespace MinecraftModUpdater
     public partial class UpdateForm : Form
     {
         private Timer fadeInTimer;
+        private Timer fadeOutTimer;
 
         public UpdateForm()
         {
@@ -21,8 +22,8 @@ namespace MinecraftModUpdater
         private async void UpdateForm_Load(object sender, EventArgs e)
         {
             lblStatus.Text = "Проверка обновлений...";
-            lblStatus.ForeColor = Color.White; // ✅ Убеждаемся, что текст белый
-            lblStatus.BackColor = Color.Transparent; // ✅ Убеждаемся, что фон прозрачный
+            lblStatus.ForeColor = Color.White;
+            lblStatus.BackColor = Color.Transparent;
 
             bool isUpdateAvailable = await Updater.CheckForUpdateAsync();
 
@@ -35,12 +36,10 @@ namespace MinecraftModUpdater
             else
             {
                 lblStatus.Text = "У вас последняя версия.";
-                lblStatus.ForeColor = Color.White; // ✅ Чисто белый
-                lblStatus.BackColor = Color.Transparent; // ✅ Фон прозрачный
                 await AnimateProgressComplete();
                 MessageBox.Show("У вас уже последняя версия лаунчера.", "Обновление", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                this.DialogResult = DialogResult.OK;
-                this.Close();
+                
+                StartFadeOut(); // 🚀 Запускаем анимацию закрытия перед `MainForm`
             }
         }
 
@@ -101,7 +100,7 @@ namespace MinecraftModUpdater
         private void InitFadeIn()
         {
             fadeInTimer = new Timer();
-            fadeInTimer.Interval = 10; // Чем меньше значение, тем быстрее анимация
+            fadeInTimer.Interval = 10;
             fadeInTimer.Tick += FadeInEffect;
             fadeInTimer.Start();
         }
@@ -110,11 +109,34 @@ namespace MinecraftModUpdater
         {
             if (this.Opacity < 1)
             {
-                this.Opacity += 0.05; // Шаг прозрачности (чем меньше, тем плавнее)
+                this.Opacity += 0.05;
             }
             else
             {
                 fadeInTimer.Stop();
+            }
+        }
+
+        // 🚀 Добавляем плавное закрытие (Fade Out)
+        private void StartFadeOut()
+        {
+            fadeOutTimer = new Timer();
+            fadeOutTimer.Interval = 10;
+            fadeOutTimer.Tick += FadeOutEffect;
+            fadeOutTimer.Start();
+        }
+
+        private void FadeOutEffect(object sender, EventArgs e)
+        {
+            if (this.Opacity > 0)
+            {
+                this.Opacity -= 0.05;
+            }
+            else
+            {
+                fadeOutTimer.Stop();
+                this.DialogResult = DialogResult.OK;
+                this.Close(); // Закрываем `UpdateForm` после полной прозрачности
             }
         }
     }
