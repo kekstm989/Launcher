@@ -97,6 +97,19 @@ namespace MinecraftModUpdater
 
                 if (needsUpdate)
                 {
+                    // ✅ Удаляем старый мод перед скачиванием
+                    if (File.Exists(localFilePath))
+                    {
+                        try
+                        {
+                            File.Delete(localFilePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Ошибка удаления старой версии {modName}: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+
                     await DownloadModAsync(RepoRawUrl + modName, localFilePath, item);
                     File.WriteAllText(cacheFilePath, remoteHash); // Обновляем кэш после загрузки
                 }
