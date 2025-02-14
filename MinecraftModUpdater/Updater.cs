@@ -87,16 +87,16 @@ namespace MinecraftModUpdater
                 File.Move(localFile, backupFile, true);
                 File.Move(tempFile, localFile, true);
 
-                // Создаём батник для удаления .bak после перезапуска
+                // Создаём cleanup.bat для удаления .bak после перезапуска
                 File.WriteAllText(scriptFile, $@"
 @echo off
-timeout /t 2 >nul
+timeout /t 5 >nul
 del ""{backupFile}""
 del ""{scriptFile}""
 exit
 ");
 
-                // Запускаем cleanup.bat и перезапускаем лаунчер
+                // Запускаем cleanup.bat перед выходом
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = scriptFile,
