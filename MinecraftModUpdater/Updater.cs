@@ -49,6 +49,7 @@ namespace MinecraftModUpdater
                 string localFile = Application.ExecutablePath;
                 string tempFile = localFile + ".new";
                 string backupFile = localFile + ".bak";
+                string scriptFile = Path.Combine(Path.GetTempPath(), "cleanup.bat");
 
                 using (HttpResponseMessage response = await httpClient.GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead))
                 {
@@ -68,9 +69,10 @@ namespace MinecraftModUpdater
 
                                 if (totalBytes > 0)
                                 {
+                                    int progress = (int)((totalRead * 100) / totalBytes);
                                     progressBar.Invoke(new Action(() =>
                                     {
-                                        progressBar.Value = (int)((totalRead * 100) / totalBytes);
+                                        progressBar.Value = progress;
                                     }));
                                 }
                             }
@@ -78,21 +80,26 @@ namespace MinecraftModUpdater
                     }
                 }
 
-                // Удаляем старый backup, если он остался от предыдущих обновлений
-                if (File.Exists(backupFile))
-                {
-                    File.Delete(backupFile);
-                }
+                // Переименовываем старый .exe в .bak и заменяем новым
+                File.Move(localFile, backupFile, true);
+                File.Move(tempFile, localFile, true);
 
-                // Создаём резервную копию текущего .exe перед заменой
-                File.Move(localFile, backupFile);
-                File.Move(tempFile, localFile);
+                // Создаём батник для удаления .bak после перезапуска
+                File.WriteAllText(scriptFile, $@"
+@echo off
+timeout /t 2 >nul
+del ""{backupFile}""
+del ""{scriptFile}""
+exit
+");
 
-                // Удаляем .bak после успешного обновления
-                if (File.Exists(backupFile))
+                // Запускаем cleanup.bat и перезапускаем лаунчер
+                Process.Start(new ProcessStartInfo
                 {
-                    File.Delete(backupFile);
-                }
+                    FileName = scriptFile,
+                    UseShellExecute = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                });
 
                 MessageBox.Show("Обновление завершено! Перезапуск лаунчера.", "Обновление", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Process.Start(localFile);
