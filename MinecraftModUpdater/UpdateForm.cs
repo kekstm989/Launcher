@@ -15,7 +15,8 @@ namespace MinecraftModUpdater
         public UpdateForm()
         {
             InitializeComponent();
-            this.Opacity = 0; // Начинаем с полной прозрачности
+            this.Opacity = 0;
+            progressBar.Visible = false; // ✅ Скрываем ProgressBar при старте
             InitFadeIn();
         }
 
@@ -30,16 +31,15 @@ namespace MinecraftModUpdater
             if (isUpdateAvailable)
             {
                 lblStatus.Text = "Обновление...";
+                progressBar.Visible = true;  // ✅ Показываем ProgressBar только при обновлении
+                progressBar.Value = 0;
                 await AnimateProgress();
                 await Updater.UpdateLauncherAsync(progressBar);
             }
             else
             {
                 lblStatus.Text = "У вас последняя версия.";
-                await AnimateProgressComplete();
-                MessageBox.Show("У вас уже последняя версия лаунчера.", "Обновление", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                
-                StartFadeOut(); // 🚀 Запускаем анимацию закрытия перед `MainForm`
+                StartFadeOut();
             }
         }
 
@@ -49,15 +49,6 @@ namespace MinecraftModUpdater
             {
                 progressBar.Value = i;
                 await Task.Delay(20);
-            }
-        }
-
-        private async Task AnimateProgressComplete()
-        {
-            for (int i = progressBar.Value; i <= 100; i += 5)
-            {
-                progressBar.Value = i;
-                await Task.Delay(10);
             }
         }
 
@@ -136,7 +127,7 @@ namespace MinecraftModUpdater
             {
                 fadeOutTimer.Stop();
                 this.DialogResult = DialogResult.OK;
-                this.Close(); // Закрываем `UpdateForm` после полной прозрачности
+                this.Close();
             }
         }
     }
