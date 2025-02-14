@@ -1,8 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "Q9Pe+sKiMw8=",
+  "dgSpecHash": "d7s9GkxfjdQ=",
   "success": true,
   "projectFilePath": "C:\\Users\\KEKS\\Desktop\\Launcher\\MinecraftModUpdater\\MinecraftModUpdater.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "C:\\Users\\KEKS\\.nuget\\packages\\microsoft.net.illink.tasks\\9.0.2\\microsoft.net.illink.tasks.9.0.2.nupkg.sha512",
+    "C:\\Users\\KEKS\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\9.0.2\\microsoft.netcore.app.runtime.win-x64.9.0.2.nupkg.sha512",
+    "C:\\Users\\KEKS\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\9.0.2\\microsoft.windowsdesktop.app.runtime.win-x64.9.0.2.nupkg.sha512",
+    "C:\\Users\\KEKS\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\9.0.2\\microsoft.aspnetcore.app.runtime.win-x64.9.0.2.nupkg.sha512"
+  ],
   "logs": []
 }
