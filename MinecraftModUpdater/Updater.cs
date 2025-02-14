@@ -32,7 +32,10 @@ namespace MinecraftModUpdater
                     string localFile = Application.ExecutablePath;
                     DateTime localDate = File.GetLastWriteTimeUtc(localFile);
 
-                    return remoteDate > localDate;
+                    bool updateNeeded = remoteDate > localDate;
+
+                    Console.WriteLine(updateNeeded ? "Требуется обновление лаунчера." : "Лаунчер актуален.");
+                    return updateNeeded;
                 }
             }
             catch (Exception ex)
