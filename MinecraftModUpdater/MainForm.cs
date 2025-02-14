@@ -24,8 +24,8 @@ namespace MinecraftModUpdater
             progressBar.Visible = true;
             await ModUpdater.UpdateModsAsync(listViewMods);
             progressBar.Visible = false;
-            lblTitle.Text = "Minecraft Mod Updater";
-            new CustomMessageBox("Обновление завершено!", "Minecraft Mod Updater").ShowDialog();
+            lblTitle.Text = "Minecraft Nexon Project Mod Updater";
+            new CustomMessageBox("Обновление завершено!", "Minecraft Nexon Project Mod Updater").ShowDialog();
         }
 
         private void btnClose_Click(object sender, EventArgs e)

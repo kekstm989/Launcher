@@ -45,7 +45,7 @@ namespace MinecraftModUpdater
             this.lblTitle.Name = "lblTitle";
             this.lblTitle.Size = new System.Drawing.Size(400, 30);
             this.lblTitle.TabIndex = 0;
-            this.lblTitle.Text = "Minecraft Mod Updater";
+            this.lblTitle.Text = "Minecraft Nexon Project Mod Updater";
             this.lblTitle.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 
             // ✅ Добавляем поддержку перемещения окна без рамки
