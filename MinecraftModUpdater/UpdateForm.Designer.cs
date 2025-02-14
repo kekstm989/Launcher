@@ -5,7 +5,6 @@ namespace MinecraftModUpdater
         private System.ComponentModel.IContainer components = null;
         private System.Windows.Forms.Label lblStatus;
         private System.Windows.Forms.ProgressBar progressBar;
-        private System.Windows.Forms.Button btnClose;
 
         protected override void Dispose(bool disposing)
         {
@@ -20,7 +19,6 @@ namespace MinecraftModUpdater
         {
             this.lblStatus = new System.Windows.Forms.Label();
             this.progressBar = new System.Windows.Forms.ProgressBar();
-            this.btnClose = new System.Windows.Forms.Button();
             this.SuspendLayout();
 
             // 
@@ -46,33 +44,19 @@ namespace MinecraftModUpdater
             this.progressBar.TabIndex = 1;
 
             // 
-            // btnClose
-            // 
-            this.btnClose.Text = "X";
-            this.btnClose.BackColor = System.Drawing.Color.FromArgb(50, 50, 50);
-            this.btnClose.ForeColor = System.Drawing.Color.White;
-            this.btnClose.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnClose.Font = new System.Drawing.Font("Arial", 10F, System.Drawing.FontStyle.Bold);
-            this.btnClose.Location = new System.Drawing.Point(260, 5);
-            this.btnClose.Size = new System.Drawing.Size(30, 30);
-            this.btnClose.TabIndex = 2;
-            this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
-
-            // 
             // UpdateForm
             // 
             this.ClientSize = new System.Drawing.Size(300, 100);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.progressBar);
-            this.Controls.Add(this.btnClose);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None; // Убираем рамку
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.BackColor = System.Drawing.Color.FromArgb(30, 30, 30); // Тёмный фон
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Обновление лаунчера";
             this.Load += new System.EventHandler(this.UpdateForm_Load);
             this.Shown += new System.EventHandler(this.ApplyShadow); // Применяем тень при показе
+            this.Paint += new System.Windows.Forms.PaintEventHandler(this.UpdateForm_Paint); // Рисуем градиентный фон
             this.ResumeLayout(false);
         }
     }

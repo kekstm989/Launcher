@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -8,9 +9,13 @@ namespace MinecraftModUpdater
 {
     public partial class UpdateForm : Form
     {
+        private Timer fadeInTimer;
+
         public UpdateForm()
         {
             InitializeComponent();
+            this.Opacity = 0; // Начинаем с полной прозрачности
+            InitFadeIn();
         }
 
         private async void UpdateForm_Load(object sender, EventArgs e)
@@ -27,6 +32,7 @@ namespace MinecraftModUpdater
             else
             {
                 lblStatus.Text = "У вас последняя версия.";
+                lblStatus.BackColor = Color.Transparent; // Убираем фон текста
                 await AnimateProgressComplete();
                 MessageBox.Show("У вас уже последняя версия лаунчера.", "Обновление", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 this.DialogResult = DialogResult.OK;
@@ -62,12 +68,6 @@ namespace MinecraftModUpdater
             DwmExtendFrameIntoClientArea(this.Handle, ref margins);
         }
 
-        // Обработчик кнопки закрытия
-        private void btnClose_Click(object sender, EventArgs e)
-        {
-            Application.Exit();
-        }
-
         // Импортируем DWM API для добавления тени
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
@@ -78,6 +78,40 @@ namespace MinecraftModUpdater
         private struct Margins
         {
             public int left, right, top, bottom;
+        }
+
+        // Градиентный ЧЁРНЫЙ фон
+        private void UpdateForm_Paint(object sender, PaintEventArgs e)
+        {
+            using (LinearGradientBrush brush = new LinearGradientBrush(
+                this.ClientRectangle,
+                Color.Black,  // Чисто ЧЁРНЫЙ
+                Color.FromArgb(40, 40, 40),  // Тёмно-серый для эффекта объёма
+                LinearGradientMode.Vertical))
+            {
+                e.Graphics.FillRectangle(brush, this.ClientRectangle);
+            }
+        }
+
+        // Добавляем плавное появление (Fade In)
+        private void InitFadeIn()
+        {
+            fadeInTimer = new Timer();
+            fadeInTimer.Interval = 10; // Чем меньше значение, тем быстрее анимация
+            fadeInTimer.Tick += FadeInEffect;
+            fadeInTimer.Start();
+        }
+
+        private void FadeInEffect(object sender, EventArgs e)
+        {
+            if (this.Opacity < 1)
+            {
+                this.Opacity += 0.05; // Шаг прозрачности (чем меньше, тем плавнее)
+            }
+            else
+            {
+                fadeInTimer.Stop();
+            }
         }
     }
 }
