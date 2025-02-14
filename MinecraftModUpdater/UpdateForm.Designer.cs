@@ -25,7 +25,7 @@ namespace MinecraftModUpdater
             // lblStatus
             // 
             this.lblStatus.Font = new System.Drawing.Font("Arial", 10F, System.Drawing.FontStyle.Bold);
-            this.lblStatus.ForeColor = System.Drawing.Color.White;
+            /*this.lblStatus.ForeColor = System.Drawing.Color.White;*/
             this.lblStatus.Location = new System.Drawing.Point(20, 20);
             this.lblStatus.Name = "lblStatus";
             this.lblStatus.Size = new System.Drawing.Size(250, 20);
