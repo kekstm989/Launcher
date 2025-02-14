@@ -14,11 +14,12 @@ namespace MinecraftModUpdater
             // Сначала запускаем окно обновления лаунчера
             using (UpdateForm updateForm = new UpdateForm())
             {
-                Application.Run(updateForm);
+                if (updateForm.ShowDialog() == DialogResult.OK)
+                {
+                    // После успешного обновления запускаем MainForm
+                    Application.Run(new MainForm());
+                }
             }
-
-            // Если обновление завершилось — запускаем основной лаунчер
-            Application.Run(new MainForm());
         }
     }
 }

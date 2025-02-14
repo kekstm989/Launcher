@@ -25,7 +25,8 @@ namespace MinecraftModUpdater
             {
                 lblStatus.Text = "У вас последняя версия.";
                 MessageBox.Show("У вас уже последняя версия лаунчера.", "Обновление", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                this.Close(); // Закрываем окно обновления, если обновлять нечего
+                this.DialogResult = DialogResult.OK; // Закрываем окно обновления с флагом "ОК"
+                this.Close();
             }
         }
     }
