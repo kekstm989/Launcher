@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -72,7 +71,9 @@ namespace MinecraftModUpdater
                 Directory.CreateDirectory(cacheFolder);
 
             Dictionary<string, string> repoMods = await GetModListFromRepoAsync();
-            string[] localMods = Directory.GetFiles(modsFolder, "*.jar");
+
+            // ✅ Очищаем `listView`, чтобы не дублировать моды
+            listView.Items.Clear();
 
             foreach (var mod in repoMods)
             {
