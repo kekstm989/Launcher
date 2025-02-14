@@ -21,6 +21,9 @@ namespace MinecraftModUpdater
         private async void UpdateForm_Load(object sender, EventArgs e)
         {
             lblStatus.Text = "Проверка обновлений...";
+            lblStatus.ForeColor = Color.White; // ✅ Убеждаемся, что текст белый
+            lblStatus.BackColor = Color.Transparent; // ✅ Убеждаемся, что фон прозрачный
+
             bool isUpdateAvailable = await Updater.CheckForUpdateAsync();
 
             if (isUpdateAvailable)
@@ -32,7 +35,8 @@ namespace MinecraftModUpdater
             else
             {
                 lblStatus.Text = "У вас последняя версия.";
-                lblStatus.BackColor = Color.Transparent; // Убираем фон текста
+                lblStatus.ForeColor = Color.White; // ✅ Чисто белый
+                lblStatus.BackColor = Color.Transparent; // ✅ Фон прозрачный
                 await AnimateProgressComplete();
                 MessageBox.Show("У вас уже последняя версия лаунчера.", "Обновление", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 this.DialogResult = DialogResult.OK;
