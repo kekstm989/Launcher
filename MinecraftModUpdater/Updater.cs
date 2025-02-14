@@ -32,7 +32,7 @@ namespace MinecraftModUpdater
                     string localFile = Application.ExecutablePath;
                     DateTime localDate = File.GetLastWriteTimeUtc(localFile);
 
-                    return remoteDate > localDate; // Если удалённая дата новее — обновляем
+                    return remoteDate > localDate;
                 }
             }
             catch (Exception ex)
@@ -42,34 +42,55 @@ namespace MinecraftModUpdater
             }
         }
 
-        public static async Task UpdateLauncherAsync()
+        public static async Task<bool> UpdateLauncherAsync(ProgressBar progressBar)
         {
             try
             {
                 string localFile = Application.ExecutablePath;
                 string tempFile = localFile + ".new";
 
-                using (HttpResponseMessage response = await httpClient.GetAsync(DownloadUrl))
+                using (HttpResponseMessage response = await httpClient.GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead))
                 {
                     response.EnsureSuccessStatusCode();
+                    long totalBytes = response.Content.Headers.ContentLength ?? -1;
                     await using (FileStream fs = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
                     {
-                        await response.Content.CopyToAsync(fs);
+                        using (var contentStream = await response.Content.ReadAsStreamAsync())
+                        {
+                            byte[] buffer = new byte[8192];
+                            long totalRead = 0;
+                            int bytesRead;
+                            while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                            {
+                                await fs.WriteAsync(buffer, 0, bytesRead);
+                                totalRead += bytesRead;
+
+                                if (totalBytes > 0)
+                                {
+                                    progressBar.Invoke(new Action(() =>
+                                    {
+                                        progressBar.Value = (int)((totalRead * 100) / totalBytes);
+                                    }));
+                                }
+                            }
+                        }
                     }
                 }
 
                 string backupFile = localFile + ".bak";
                 if (File.Exists(backupFile)) File.Delete(backupFile);
-                File.Move(localFile, backupFile); // Резервная копия старого exe
-                File.Move(tempFile, localFile); // Обновляем exe
+                File.Move(localFile, backupFile);
+                File.Move(tempFile, localFile);
 
-                MessageBox.Show("Обновление завершено! Перезапустите приложение.", "Обновление", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Обновление завершено! Перезапуск лаунчера.", "Обновление", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Process.Start(localFile);
                 Environment.Exit(0);
+                return true;
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка обновления: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
         }
     }

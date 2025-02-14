@@ -2,7 +2,6 @@
 {
     partial class MainForm
     {
-        private System.ComponentModel.IContainer components = null;
         private System.Windows.Forms.Button btnUpdateMods;
         private System.Windows.Forms.Button btnUpdateLauncher;
 
