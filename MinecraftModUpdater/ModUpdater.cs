@@ -31,6 +31,85 @@ namespace MinecraftModUpdater
             }
         }
 
+        public static async Task UpdateModsAsync(ListView listView)
+        {
+            await ShowAndUpdateModsAsync(listView);
+        }
+
+        public static async Task ShowAndUpdateModsAsync(ListView listView)
+        {
+            string modsFolder = GetModsFolderPath();
+            string cacheFolder = GetCacheFolderPath();
+
+            if (!Directory.Exists(modsFolder))
+                Directory.CreateDirectory(modsFolder);
+
+            if (!Directory.Exists(cacheFolder))
+                Directory.CreateDirectory(cacheFolder);
+
+            // 1️⃣ **Показываем локальные моды**
+            Dictionary<string, DateTime> localMods = GetLocalMods(modsFolder);
+            listView.Items.Clear();
+
+            foreach (var mod in localMods)
+            {
+                ListViewItem item = new ListViewItem(mod.Key);
+                item.SubItems.Add("Локальный");
+                item.SubItems.Add("-");
+                listView.Items.Add(item);
+            }
+
+            await Task.Delay(2000); // ⚡ Даем 2 секунды на отображение списка
+
+            // 2️⃣ **Проверяем обновления с GitHub**
+            Dictionary<string, DateTime> repoMods = await GetModListFromRepoAsync();
+
+            foreach (var mod in repoMods)
+            {
+                string modName = mod.Key;
+                DateTime remoteDate = mod.Value;
+                string localFilePath = Path.Combine(modsFolder, modName);
+                string cacheFilePath = Path.Combine(cacheFolder, modName + ".date");
+
+                bool needsUpdate = !localMods.ContainsKey(modName) || localMods[modName] < remoteDate;
+
+                ListViewItem item = new ListViewItem(modName);
+                item.SubItems.Add(needsUpdate ? "Требует обновления" : "Актуальная версия");
+                item.SubItems.Add(needsUpdate ? "0%" : "-");
+                listView.Items.Add(item);
+
+                if (needsUpdate)
+                {
+                    if (File.Exists(localFilePath))
+                    {
+                        try
+                        {
+                            File.Delete(localFilePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Ошибка удаления старой версии {modName}: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+
+                    await DownloadModAsync(RepoRawUrl + modName, localFilePath, item);
+                    File.WriteAllText(cacheFilePath, remoteDate.ToString("o"));
+                }
+            }
+        }
+
+        private static Dictionary<string, DateTime> GetLocalMods(string modsFolder)
+        {
+            Dictionary<string, DateTime> localMods = new Dictionary<string, DateTime>();
+
+            foreach (string file in Directory.GetFiles(modsFolder, "*.jar"))
+            {
+                localMods[Path.GetFileName(file)] = File.GetLastWriteTimeUtc(file);
+            }
+
+            return localMods;
+        }
+
         private static async Task<Dictionary<string, DateTime>> GetModListFromRepoAsync()
         {
             Dictionary<string, DateTime> modFiles = new Dictionary<string, DateTime>();
@@ -64,7 +143,7 @@ namespace MinecraftModUpdater
 
                         string fileName = fileNameElement.GetString();
                         string fileSha = fileShaElement.GetString();
-                        DateTime lastCommitDate = DateTime.UtcNow; // ❗ Можно расширить, чтобы получить точную дату коммита
+                        DateTime lastCommitDate = DateTime.UtcNow; // ❗ Получать точную дату коммита можно через другой API
 
                         if (fileName.EndsWith(".jar"))
                         {
@@ -79,67 +158,6 @@ namespace MinecraftModUpdater
             }
 
             return modFiles;
-        }
-
-        public static async Task UpdateModsAsync(ListView listView)
-        {
-            string modsFolder = GetModsFolderPath();
-            string cacheFolder = GetCacheFolderPath();
-
-            if (!Directory.Exists(modsFolder))
-                Directory.CreateDirectory(modsFolder);
-
-            if (!Directory.Exists(cacheFolder))
-                Directory.CreateDirectory(cacheFolder);
-
-            Dictionary<string, DateTime> repoMods = await GetModListFromRepoAsync();
-
-            listView.Items.Clear();
-
-            foreach (var mod in repoMods)
-            {
-                string modName = mod.Key;
-                DateTime remoteDate = mod.Value;
-                string localFilePath = Path.Combine(modsFolder, modName);
-                string cacheFilePath = Path.Combine(cacheFolder, modName + ".date");
-
-                bool needsUpdate = true;
-
-                if (File.Exists(localFilePath) && File.Exists(cacheFilePath))
-                {
-                    DateTime? cachedDate = GetCachedDate(cacheFilePath);
-
-                    // ✅ Проверяем, изменилась ли дата обновления мода на сервере
-                    if (cachedDate.HasValue && cachedDate.Value >= remoteDate)
-                    {
-                        needsUpdate = false;
-                    }
-                }
-
-                ListViewItem item = new ListViewItem(modName);
-                item.SubItems.Add(needsUpdate ? "Требует обновления" : "Актуальная версия");
-                item.SubItems.Add(needsUpdate ? "0%" : "-");
-                listView.Items.Add(item);
-
-                if (needsUpdate)
-                {
-                    // ✅ Удаляем старую версию перед обновлением
-                    if (File.Exists(localFilePath))
-                    {
-                        try
-                        {
-                            File.Delete(localFilePath);
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"Ошибка удаления старой версии {modName}: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    }
-
-                    await DownloadModAsync(RepoRawUrl + modName, localFilePath, item);
-                    File.WriteAllText(cacheFilePath, remoteDate.ToString("o")); // ✅ Записываем дату обновления
-                }
-            }
         }
 
         private static async Task DownloadModAsync(string url, string savePath, ListViewItem listItem)
@@ -179,19 +197,6 @@ namespace MinecraftModUpdater
             {
                 MessageBox.Show($"Ошибка загрузки {url}: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
-
-        private static DateTime? GetCachedDate(string filePath)
-        {
-            if (File.Exists(filePath))
-            {
-                string content = File.ReadAllText(filePath).Trim();
-                if (DateTime.TryParse(content, out DateTime cachedDate))
-                {
-                    return cachedDate;
-                }
-            }
-            return null;
         }
 
         private static string GetModsFolderPath() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "mods");
