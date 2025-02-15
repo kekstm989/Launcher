@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -12,12 +13,12 @@ namespace MinecraftModUpdater
     class ModUpdater
     {
         private static readonly HttpClient httpClient = new HttpClient();
-        
+
         // ✅ Загружаем GitHub API Token из переменной среды
         private static readonly string GitHubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
 
         private const string RepoApiUrl = "https://api.github.com/repos/kekstm989/Launcher/contents/MinecraftModUpdater/Mods";
-        private const string RepoRawUrl = "https://github.com/kekstm989/Launcher/raw/main/MinecraftModUpdater/Mods/";
+        private const string RepoRawUrl = "https://raw.githubusercontent.com/kekstm989/Launcher/main/MinecraftModUpdater/Mods/";
 
         static ModUpdater()
         {
@@ -33,12 +34,6 @@ namespace MinecraftModUpdater
             }
         }
 
-        private static string GetModsFolderPath()
-        {
-            string userPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            return Path.Combine(userPath, ".minecraft", "mods");
-        }
-
         private static async Task<Dictionary<string, string>> GetModListFromRepoAsync()
         {
             Dictionary<string, string> modFiles = new Dictionary<string, string>();
@@ -49,7 +44,12 @@ namespace MinecraftModUpdater
                 {
                     if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                     {
-                        MessageBox.Show("Ошибка 401: Неверный GitHub API Token!", "Ошибка авторизации", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Ошибка 401: Неверный GitHub API Token! Проверьте токен и попробуйте снова.", "Ошибка авторизации", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return modFiles;
+                    }
+                    else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                    {
+                        MessageBox.Show("Ошибка 403: Превышен лимит запросов к GitHub API! Попробуйте позже.", "Ошибка авторизации", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return modFiles;
                     }
 
@@ -104,12 +104,13 @@ namespace MinecraftModUpdater
                 string modName = mod.Key;
                 string remoteSha = mod.Value;
                 string localFilePath = Path.Combine(modsFolder, modName);
+                string shaFilePath = localFilePath + ".sha";
 
                 bool needsUpdate = true;
 
-                if (File.Exists(localFilePath))
+                if (File.Exists(localFilePath) && File.Exists(shaFilePath))
                 {
-                    string localSha = File.ReadAllText(localFilePath + ".sha").Trim();
+                    string localSha = File.ReadAllText(shaFilePath).Trim();
                     needsUpdate = !localSha.Equals(remoteSha);
                 }
 
@@ -134,7 +135,7 @@ namespace MinecraftModUpdater
                     }
 
                     await DownloadModAsync(RepoRawUrl + modName, localFilePath, item);
-                    File.WriteAllText(localFilePath + ".sha", remoteSha); // ✅ Обновляем SHA после загрузки
+                    File.WriteAllText(shaFilePath, remoteSha); // ✅ Обновляем SHA после загрузки
                 }
             }
         }
@@ -180,6 +181,12 @@ namespace MinecraftModUpdater
             {
                 MessageBox.Show($"Ошибка загрузки {url}: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private static string GetModsFolderPath()
+        {
+            string userPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            return Path.Combine(userPath, ".minecraft", "mods");
         }
     }
 }
