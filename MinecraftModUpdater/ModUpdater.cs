@@ -34,9 +34,9 @@ namespace MinecraftModUpdater
             }
         }
 
-        private static async Task<Dictionary<string, string>> GetModListFromRepoAsync()
+        private static async Task<Dictionary<string, (string Sha, DateTime LastCommit)>> GetModListFromRepoAsync()
         {
-            Dictionary<string, string> modFiles = new Dictionary<string, string>();
+            Dictionary<string, (string Sha, DateTime LastCommit)> modFiles = new Dictionary<string, (string, DateTime)>();
 
             try
             {
@@ -68,9 +68,11 @@ namespace MinecraftModUpdater
                         string fileName = fileNameElement.GetString();
                         string fileSha = fileShaElement.GetString();
 
+                        DateTime lastCommitDate = DateTime.UtcNow; // Можно расширить запрос, чтобы получить дату коммита.
+
                         if (fileName.EndsWith(".jar"))
                         {
-                            modFiles[fileName] = fileSha;
+                            modFiles[fileName] = (fileSha, lastCommitDate);
                         }
                     }
                 }
@@ -90,11 +92,15 @@ namespace MinecraftModUpdater
         public static async Task UpdateModsAsync(ListView listView)
         {
             string modsFolder = GetModsFolderPath();
+            string cacheFolder = GetCacheFolderPath();
 
             if (!Directory.Exists(modsFolder))
                 Directory.CreateDirectory(modsFolder);
 
-            Dictionary<string, string> repoMods = await GetModListFromRepoAsync();
+            if (!Directory.Exists(cacheFolder))
+                Directory.CreateDirectory(cacheFolder);
+
+            Dictionary<string, (string Sha, DateTime LastCommit)> repoMods = await GetModListFromRepoAsync();
 
             // ✅ Очищаем `listView`, чтобы не дублировать моды
             listView.Items.Clear();
@@ -102,16 +108,20 @@ namespace MinecraftModUpdater
             foreach (var mod in repoMods)
             {
                 string modName = mod.Key;
-                string remoteSha = mod.Value;
+                string remoteSha = mod.Value.Sha;
+                DateTime remoteDate = mod.Value.LastCommit;
                 string localFilePath = Path.Combine(modsFolder, modName);
-                string shaFilePath = localFilePath + ".sha";
+                string cacheFilePath = Path.Combine(cacheFolder, modName + ".sha");
 
                 bool needsUpdate = true;
 
-                if (File.Exists(localFilePath) && File.Exists(shaFilePath))
+                if (File.Exists(localFilePath) && File.Exists(cacheFilePath))
                 {
-                    string localSha = File.ReadAllText(shaFilePath).Trim();
-                    needsUpdate = !localSha.Equals(remoteSha);
+                    string localSha = File.ReadAllText(cacheFilePath).Trim();
+                    DateTime localDate = File.GetLastWriteTimeUtc(localFilePath);
+
+                    // ✅ Проверка по SHA и дате коммита
+                    needsUpdate = !localSha.Equals(remoteSha) || localDate < remoteDate;
                 }
 
                 ListViewItem item = new ListViewItem(modName);
@@ -135,7 +145,7 @@ namespace MinecraftModUpdater
                     }
 
                     await DownloadModAsync(RepoRawUrl + modName, localFilePath, item);
-                    File.WriteAllText(shaFilePath, remoteSha); // ✅ Обновляем SHA после загрузки
+                    File.WriteAllText(cacheFilePath, remoteSha); // ✅ Обновляем SHA после загрузки
                 }
             }
         }
@@ -173,20 +183,13 @@ namespace MinecraftModUpdater
 
                 listItem.SubItems[1].Text = "Готово";
             }
-            catch (HttpRequestException ex)
-            {
-                MessageBox.Show($"Ошибка сети при загрузке {url}: {ex.Message}", "Ошибка сети", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка загрузки {url}: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private static string GetModsFolderPath()
-        {
-            string userPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            return Path.Combine(userPath, ".minecraft", "mods");
-        }
+        private static string GetModsFolderPath() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "mods");
+        private static string GetCacheFolderPath() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "mods_cache");
     }
 }
