@@ -13,9 +13,9 @@ namespace MinecraftModUpdater
     {
         private static readonly HttpClient httpClient = new HttpClient();
         
-        // 🔥 **ВСТАВЬ СВОЙ API TOKEN** 🔥  
-        private const string GitHubToken = "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"; 
-        
+        // ✅ Загружаем GitHub API Token из переменной среды
+        private static readonly string GitHubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+
         private const string RepoApiUrl = "https://api.github.com/repos/kekstm989/Launcher/contents/MinecraftModUpdater/Mods";
         private const string RepoRawUrl = "https://github.com/kekstm989/Launcher/raw/main/MinecraftModUpdater/Mods/";
 
@@ -25,8 +25,11 @@ namespace MinecraftModUpdater
 
             if (!string.IsNullOrEmpty(GitHubToken))
             {
-                // ✅ Используем `Basic Authentication`
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", GitHubToken);
+            }
+            else
+            {
+                MessageBox.Show("Ошибка: GitHub API Token отсутствует! Добавьте его в переменные среды.", "Ошибка авторизации", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -34,12 +37,6 @@ namespace MinecraftModUpdater
         {
             string userPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             return Path.Combine(userPath, ".minecraft", "mods");
-        }
-
-        private static string GetCacheFolderPath()
-        {
-            string userPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            return Path.Combine(userPath, ".minecraft", "mods_cache");
         }
 
         private static async Task<Dictionary<string, string>> GetModListFromRepoAsync()
@@ -93,13 +90,9 @@ namespace MinecraftModUpdater
         public static async Task UpdateModsAsync(ListView listView)
         {
             string modsFolder = GetModsFolderPath();
-            string cacheFolder = GetCacheFolderPath();
 
             if (!Directory.Exists(modsFolder))
                 Directory.CreateDirectory(modsFolder);
-
-            if (!Directory.Exists(cacheFolder))
-                Directory.CreateDirectory(cacheFolder);
 
             Dictionary<string, string> repoMods = await GetModListFromRepoAsync();
 
@@ -111,13 +104,12 @@ namespace MinecraftModUpdater
                 string modName = mod.Key;
                 string remoteSha = mod.Value;
                 string localFilePath = Path.Combine(modsFolder, modName);
-                string cacheFilePath = Path.Combine(cacheFolder, modName + ".sha");
 
                 bool needsUpdate = true;
 
-                if (File.Exists(localFilePath) && File.Exists(cacheFilePath))
+                if (File.Exists(localFilePath))
                 {
-                    string localSha = File.ReadAllText(cacheFilePath).Trim();
+                    string localSha = File.ReadAllText(localFilePath + ".sha").Trim();
                     needsUpdate = !localSha.Equals(remoteSha);
                 }
 
@@ -142,7 +134,7 @@ namespace MinecraftModUpdater
                     }
 
                     await DownloadModAsync(RepoRawUrl + modName, localFilePath, item);
-                    File.WriteAllText(cacheFilePath, remoteSha); // ✅ Обновляем SHA после загрузки
+                    File.WriteAllText(localFilePath + ".sha", remoteSha); // ✅ Обновляем SHA после загрузки
                 }
             }
         }
