@@ -12,7 +12,6 @@ namespace MinecraftModUpdater
     class ModUpdater
     {
         private static readonly HttpClient httpClient = new HttpClient();
-
         private static readonly string GitHubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
 
         private const string RepoApiUrl = "https://api.github.com/repos/kekstm989/Launcher/contents/MinecraftModUpdater/Mods";
@@ -57,13 +56,15 @@ namespace MinecraftModUpdater
 
                     foreach (JsonElement file in json.RootElement.EnumerateArray())
                     {
-                        if (!file.TryGetProperty("name", out JsonElement fileNameElement))
+                        if (!file.TryGetProperty("name", out JsonElement fileNameElement) ||
+                            !file.TryGetProperty("sha", out JsonElement fileShaElement))
                         {
                             continue;
                         }
 
                         string fileName = fileNameElement.GetString();
-                        DateTime lastCommitDate = DateTime.UtcNow; // ❗ Можно заменить на реальную дату коммита
+                        string fileSha = fileShaElement.GetString();
+                        DateTime lastCommitDate = DateTime.UtcNow; // ❗ Можно расширить, чтобы получить точную дату коммита
 
                         if (fileName.EndsWith(".jar"))
                         {
@@ -72,13 +73,9 @@ namespace MinecraftModUpdater
                     }
                 }
             }
-            catch (HttpRequestException ex)
-            {
-                MessageBox.Show($"Ошибка сети при получении списка модов: {ex.Message}", "Ошибка сети", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при обработке JSON: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Ошибка при получении списка модов: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
             return modFiles;
@@ -110,11 +107,10 @@ namespace MinecraftModUpdater
 
                 if (File.Exists(localFilePath) && File.Exists(cacheFilePath))
                 {
-                    DateTime localDate = File.GetLastWriteTimeUtc(localFilePath);
                     DateTime? cachedDate = GetCachedDate(cacheFilePath);
 
-                    // ✅ Проверяем по дате изменения файла
-                    if (cachedDate.HasValue && localDate >= remoteDate)
+                    // ✅ Проверяем, изменилась ли дата обновления мода на сервере
+                    if (cachedDate.HasValue && cachedDate.Value >= remoteDate)
                     {
                         needsUpdate = false;
                     }
@@ -127,6 +123,7 @@ namespace MinecraftModUpdater
 
                 if (needsUpdate)
                 {
+                    // ✅ Удаляем старую версию перед обновлением
                     if (File.Exists(localFilePath))
                     {
                         try
@@ -140,7 +137,7 @@ namespace MinecraftModUpdater
                     }
 
                     await DownloadModAsync(RepoRawUrl + modName, localFilePath, item);
-                    File.WriteAllText(cacheFilePath, remoteDate.ToString("o")); // ✅ Сохраняем дату изменения
+                    File.WriteAllText(cacheFilePath, remoteDate.ToString("o")); // ✅ Записываем дату обновления
                 }
             }
         }
