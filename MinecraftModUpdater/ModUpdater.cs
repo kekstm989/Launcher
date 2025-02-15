@@ -14,7 +14,6 @@ namespace MinecraftModUpdater
     {
         private static readonly HttpClient httpClient = new HttpClient();
 
-        // ✅ Загружаем GitHub API Token из переменной среды
         private static readonly string GitHubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
 
         private const string RepoApiUrl = "https://api.github.com/repos/kekstm989/Launcher/contents/MinecraftModUpdater/Mods";
@@ -34,9 +33,9 @@ namespace MinecraftModUpdater
             }
         }
 
-        private static async Task<Dictionary<string, (string Sha, DateTime LastCommit)>> GetModListFromRepoAsync()
+        private static async Task<Dictionary<string, string>> GetModListFromRepoAsync()
         {
-            Dictionary<string, (string Sha, DateTime LastCommit)> modFiles = new Dictionary<string, (string, DateTime)>();
+            Dictionary<string, string> modFiles = new Dictionary<string, string>();
 
             try
             {
@@ -44,12 +43,12 @@ namespace MinecraftModUpdater
                 {
                     if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                     {
-                        MessageBox.Show("Ошибка 401: Неверный GitHub API Token! Проверьте токен и попробуйте снова.", "Ошибка авторизации", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Ошибка 401: Неверный GitHub API Token!", "Ошибка авторизации", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return modFiles;
                     }
                     else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                     {
-                        MessageBox.Show("Ошибка 403: Превышен лимит запросов к GitHub API! Попробуйте позже.", "Ошибка авторизации", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show("Ошибка 403: Превышен лимит запросов к GitHub API!", "Ошибка авторизации", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return modFiles;
                     }
 
@@ -68,11 +67,9 @@ namespace MinecraftModUpdater
                         string fileName = fileNameElement.GetString();
                         string fileSha = fileShaElement.GetString();
 
-                        DateTime lastCommitDate = DateTime.UtcNow; // Можно расширить запрос, чтобы получить дату коммита.
-
                         if (fileName.EndsWith(".jar"))
                         {
-                            modFiles[fileName] = (fileSha, lastCommitDate);
+                            modFiles[fileName] = fileSha;
                         }
                     }
                 }
@@ -100,16 +97,14 @@ namespace MinecraftModUpdater
             if (!Directory.Exists(cacheFolder))
                 Directory.CreateDirectory(cacheFolder);
 
-            Dictionary<string, (string Sha, DateTime LastCommit)> repoMods = await GetModListFromRepoAsync();
+            Dictionary<string, string> repoMods = await GetModListFromRepoAsync();
 
-            // ✅ Очищаем `listView`, чтобы не дублировать моды
             listView.Items.Clear();
 
             foreach (var mod in repoMods)
             {
                 string modName = mod.Key;
-                string remoteSha = mod.Value.Sha;
-                DateTime remoteDate = mod.Value.LastCommit;
+                string remoteSha = mod.Value;
                 string localFilePath = Path.Combine(modsFolder, modName);
                 string cacheFilePath = Path.Combine(cacheFolder, modName + ".sha");
 
@@ -118,10 +113,11 @@ namespace MinecraftModUpdater
                 if (File.Exists(localFilePath) && File.Exists(cacheFilePath))
                 {
                     string localSha = File.ReadAllText(cacheFilePath).Trim();
-                    DateTime localDate = File.GetLastWriteTimeUtc(localFilePath);
 
-                    // ✅ Проверка по SHA и дате коммита
-                    needsUpdate = !localSha.Equals(remoteSha) || localDate < remoteDate;
+                    if (localSha.Equals(remoteSha))
+                    {
+                        needsUpdate = false; // ✅ Если SHA совпадает, мод не обновляется
+                    }
                 }
 
                 ListViewItem item = new ListViewItem(modName);
@@ -131,7 +127,6 @@ namespace MinecraftModUpdater
 
                 if (needsUpdate)
                 {
-                    // ✅ Удаляем старый мод перед скачиванием
                     if (File.Exists(localFilePath))
                     {
                         try
@@ -145,7 +140,7 @@ namespace MinecraftModUpdater
                     }
 
                     await DownloadModAsync(RepoRawUrl + modName, localFilePath, item);
-                    File.WriteAllText(cacheFilePath, remoteSha); // ✅ Обновляем SHA после загрузки
+                    File.WriteAllText(cacheFilePath, remoteSha);
                 }
             }
         }
