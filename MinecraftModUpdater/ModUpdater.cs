@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -33,9 +32,9 @@ namespace MinecraftModUpdater
             }
         }
 
-        private static async Task<Dictionary<string, string>> GetModListFromRepoAsync()
+        private static async Task<Dictionary<string, DateTime>> GetModListFromRepoAsync()
         {
-            Dictionary<string, string> modFiles = new Dictionary<string, string>();
+            Dictionary<string, DateTime> modFiles = new Dictionary<string, DateTime>();
 
             try
             {
@@ -58,18 +57,17 @@ namespace MinecraftModUpdater
 
                     foreach (JsonElement file in json.RootElement.EnumerateArray())
                     {
-                        if (!file.TryGetProperty("name", out JsonElement fileNameElement) ||
-                            !file.TryGetProperty("sha", out JsonElement fileShaElement))
+                        if (!file.TryGetProperty("name", out JsonElement fileNameElement))
                         {
                             continue;
                         }
 
                         string fileName = fileNameElement.GetString();
-                        string fileSha = fileShaElement.GetString();
+                        DateTime lastCommitDate = DateTime.UtcNow; // ❗ Можно заменить на реальную дату коммита
 
                         if (fileName.EndsWith(".jar"))
                         {
-                            modFiles[fileName] = fileSha;
+                            modFiles[fileName] = lastCommitDate;
                         }
                     }
                 }
@@ -97,26 +95,28 @@ namespace MinecraftModUpdater
             if (!Directory.Exists(cacheFolder))
                 Directory.CreateDirectory(cacheFolder);
 
-            Dictionary<string, string> repoMods = await GetModListFromRepoAsync();
+            Dictionary<string, DateTime> repoMods = await GetModListFromRepoAsync();
 
             listView.Items.Clear();
 
             foreach (var mod in repoMods)
             {
                 string modName = mod.Key;
-                string remoteSha = mod.Value;
+                DateTime remoteDate = mod.Value;
                 string localFilePath = Path.Combine(modsFolder, modName);
-                string cacheFilePath = Path.Combine(cacheFolder, modName + ".sha");
+                string cacheFilePath = Path.Combine(cacheFolder, modName + ".date");
 
                 bool needsUpdate = true;
 
                 if (File.Exists(localFilePath) && File.Exists(cacheFilePath))
                 {
-                    string localSha = File.ReadAllText(cacheFilePath).Trim();
+                    DateTime localDate = File.GetLastWriteTimeUtc(localFilePath);
+                    DateTime? cachedDate = GetCachedDate(cacheFilePath);
 
-                    if (localSha.Equals(remoteSha))
+                    // ✅ Проверяем по дате изменения файла
+                    if (cachedDate.HasValue && localDate >= remoteDate)
                     {
-                        needsUpdate = false; // ✅ Если SHA совпадает, мод не обновляется
+                        needsUpdate = false;
                     }
                 }
 
@@ -140,7 +140,7 @@ namespace MinecraftModUpdater
                     }
 
                     await DownloadModAsync(RepoRawUrl + modName, localFilePath, item);
-                    File.WriteAllText(cacheFilePath, remoteSha);
+                    File.WriteAllText(cacheFilePath, remoteDate.ToString("o")); // ✅ Сохраняем дату изменения
                 }
             }
         }
@@ -182,6 +182,19 @@ namespace MinecraftModUpdater
             {
                 MessageBox.Show($"Ошибка загрузки {url}: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private static DateTime? GetCachedDate(string filePath)
+        {
+            if (File.Exists(filePath))
+            {
+                string content = File.ReadAllText(filePath).Trim();
+                if (DateTime.TryParse(content, out DateTime cachedDate))
+                {
+                    return cachedDate;
+                }
+            }
+            return null;
         }
 
         private static string GetModsFolderPath() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "mods");
