@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MinecraftModUpdater")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+36802d9bb966997b35540842e255a45c199476d5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b6c07f84713d0f4c6cca4d072ed2a81408829725")]
 [assembly: System.Reflection.AssemblyProductAttribute("MinecraftModUpdater")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MinecraftModUpdater")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

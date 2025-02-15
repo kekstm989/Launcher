@@ -11,7 +11,7 @@ namespace MinecraftModUpdater
     class ModUpdater
     {
         private static readonly HttpClient httpClient = new HttpClient();
-        private const string GitHubToken = "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"; // 🔥 ВСТАВЬ СВОЙ API TOKEN СЮДА
+        private const string GitHubToken = "your_personal_access_token_here"; // 🔥 ВСТАВЬ СВОЙ API TOKEN СЮДА
         private const string RepoApiUrl = "https://api.github.com/repos/kekstm989/Launcher/contents/MinecraftModUpdater/Mods";
         private const string RepoRawUrl = "https://github.com/kekstm989/Launcher/raw/main/MinecraftModUpdater/Mods/";
 
