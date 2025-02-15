@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -11,9 +12,23 @@ namespace MinecraftModUpdater
     class ModUpdater
     {
         private static readonly HttpClient httpClient = new HttpClient();
-        private const string GitHubToken = "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"; // 🔥 ВСТАВЬ СВОЙ API TOKEN СЮДА
+        
+        // 🔥 **ВСТАВЬ СВОЙ API TOKEN** 🔥  
+        private const string GitHubToken = "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"; 
+        
         private const string RepoApiUrl = "https://api.github.com/repos/kekstm989/Launcher/contents/MinecraftModUpdater/Mods";
         private const string RepoRawUrl = "https://github.com/kekstm989/Launcher/raw/main/MinecraftModUpdater/Mods/";
+
+        static ModUpdater()
+        {
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("MinecraftModUpdater");
+
+            if (!string.IsNullOrEmpty(GitHubToken))
+            {
+                // ✅ Используем `Basic Authentication`
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", GitHubToken);
+            }
+        }
 
         private static string GetModsFolderPath()
         {
@@ -33,11 +48,14 @@ namespace MinecraftModUpdater
 
             try
             {
-                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("MinecraftModUpdater");
-                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", GitHubToken); // ✅ Добавляем токен
-
                 using (HttpResponseMessage response = await httpClient.GetAsync(RepoApiUrl))
                 {
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        MessageBox.Show("Ошибка 401: Неверный GitHub API Token!", "Ошибка авторизации", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return modFiles;
+                    }
+
                     response.EnsureSuccessStatusCode();
                     string jsonResponse = await response.Content.ReadAsStringAsync();
                     JsonDocument json = JsonDocument.Parse(jsonResponse);
