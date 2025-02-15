@@ -10,3 +10,4 @@ MinecraftModUpdater/obj/Release/net9.0-windows/win-x64/MinecraftModUpdater.Assem
 MinecraftModUpdater/ModUpdater.cs
 MinecraftModUpdater/obj/Debug/net9.0-windows/win-x64/MinecraftModUpdater.AssemblyInfo.cs
 MinecraftModUpdater/obj/Release/net9.0-windows/win-x64/MinecraftModUpdater.AssemblyInfo.cs
+MinecraftModUpdater/ModUpdater.cs
