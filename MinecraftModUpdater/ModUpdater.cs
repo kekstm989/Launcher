@@ -25,10 +25,6 @@ namespace MinecraftModUpdater
             {
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", GitHubToken);
             }
-            else
-            {
-                MessageBox.Show("Ошибка: GitHub API Token отсутствует! Добавьте его в переменные среды.", "Ошибка авторизации", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
         }
 
         public static async Task UpdateModsAsync(ListView listView)
@@ -41,13 +37,9 @@ namespace MinecraftModUpdater
             string modsFolder = GetModsFolderPath();
             string cacheFolder = GetCacheFolderPath();
 
-            if (!Directory.Exists(modsFolder))
-                Directory.CreateDirectory(modsFolder);
+            Directory.CreateDirectory(modsFolder);
+            Directory.CreateDirectory(cacheFolder);
 
-            if (!Directory.Exists(cacheFolder))
-                Directory.CreateDirectory(cacheFolder);
-
-            // 1️⃣ **Показываем локальные моды**
             Dictionary<string, DateTime> localMods = GetLocalMods(modsFolder);
             listView.Items.Clear();
 
@@ -59,9 +51,8 @@ namespace MinecraftModUpdater
                 listView.Items.Add(item);
             }
 
-            await Task.Delay(2000); // ⚡ Даем 2 секунды на отображение списка
+            await Task.Delay(2000);
 
-            // 2️⃣ **Проверяем обновления с GitHub**
             Dictionary<string, DateTime> repoMods = await GetModListFromRepoAsync();
 
             foreach (var mod in repoMods)
@@ -80,20 +71,26 @@ namespace MinecraftModUpdater
 
                 if (needsUpdate)
                 {
+                    string backupPath = localFilePath + ".bak";
+
                     if (File.Exists(localFilePath))
                     {
-                        try
+                        if (IsFileLocked(localFilePath))
                         {
-                            File.Delete(localFilePath);
+                            MessageBox.Show($"Файл {localFilePath} используется другим процессом. Закройте Minecraft и попробуйте снова.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            continue;
                         }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"Ошибка удаления старой версии {modName}: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
+
+                        File.Move(localFilePath, backupPath, true);
                     }
 
                     await DownloadModAsync(RepoRawUrl + modName, localFilePath, item);
                     File.WriteAllText(cacheFilePath, remoteDate.ToString("o"));
+
+                    if (File.Exists(backupPath))
+                    {
+                        File.Delete(backupPath);
+                    }
                 }
             }
         }
@@ -118,17 +115,6 @@ namespace MinecraftModUpdater
             {
                 using (HttpResponseMessage response = await httpClient.GetAsync(RepoApiUrl))
                 {
-                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        MessageBox.Show("Ошибка 401: Неверный GitHub API Token!", "Ошибка авторизации", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return modFiles;
-                    }
-                    else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
-                    {
-                        MessageBox.Show("Ошибка 403: Превышен лимит запросов к GitHub API!", "Ошибка авторизации", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return modFiles;
-                    }
-
                     response.EnsureSuccessStatusCode();
                     string jsonResponse = await response.Content.ReadAsStringAsync();
                     JsonDocument json = JsonDocument.Parse(jsonResponse);
@@ -143,7 +129,7 @@ namespace MinecraftModUpdater
 
                         string fileName = fileNameElement.GetString();
                         string fileSha = fileShaElement.GetString();
-                        DateTime lastCommitDate = DateTime.UtcNow; // ❗ Получать точную дату коммита можно через другой API
+                        DateTime lastCommitDate = await GetCommitDateAsync(fileName, fileSha);
 
                         if (fileName.EndsWith(".jar"))
                         {
@@ -160,16 +146,56 @@ namespace MinecraftModUpdater
             return modFiles;
         }
 
+        private static async Task<DateTime> GetCommitDateAsync(string fileName, string fileSha)
+        {
+            string commitUrl = $"https://api.github.com/repos/kekstm989/Launcher/commits/{fileSha}";
+
+            try
+            {
+                using (HttpResponseMessage response = await httpClient.GetAsync(commitUrl))
+                {
+                    response.EnsureSuccessStatusCode();
+                    string jsonResponse = await response.Content.ReadAsStringAsync();
+                    JsonDocument json = JsonDocument.Parse(jsonResponse);
+
+                    string commitDate = json.RootElement.GetProperty("commit")
+                                                        .GetProperty("committer")
+                                                        .GetProperty("date").GetString();
+
+                    return DateTime.Parse(commitDate).ToUniversalTime();
+                }
+            }
+            catch
+            {
+                return DateTime.UtcNow;
+            }
+        }
+
         private static async Task DownloadModAsync(string url, string savePath, ListViewItem listItem)
         {
             try
             {
+                if (IsFileLocked(savePath))
+                {
+                    MessageBox.Show($"Файл {savePath} используется другим процессом. Закройте Minecraft и попробуйте снова.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
                 using (HttpResponseMessage response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
                 {
                     response.EnsureSuccessStatusCode();
                     long totalBytes = response.Content.Headers.ContentLength ?? -1;
 
-                    await using (FileStream fs = new FileStream(savePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    if (totalBytes <= 0)
+                    {
+                        MessageBox.Show($"Ошибка: Не удалось получить размер файла {url}", "Ошибка загрузки", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    string tempFilePath = savePath + ".tmp";
+                    if (File.Exists(tempFilePath)) File.Delete(tempFilePath);
+
+                    await using (FileStream fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
                     {
                         using (var contentStream = await response.Content.ReadAsStreamAsync())
                         {
@@ -189,14 +215,46 @@ namespace MinecraftModUpdater
                             }
                         }
                     }
-                }
 
-                listItem.SubItems[1].Text = "Готово";
+                    if (File.Exists(savePath))
+                    {
+                        try
+                        {
+                            File.Delete(savePath);
+                        }
+                        catch (IOException)
+                        {
+                            MessageBox.Show($"Файл {savePath} не удалось удалить. Возможно, он используется. Попробуйте перезапустить компьютер.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                    }
+
+                    File.Move(tempFilePath, savePath);
+                    listItem.SubItems[1].Text = "Готово";
+                }
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка загрузки {url}: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private static bool IsFileLocked(string filePath)
+        {
+            if (!File.Exists(filePath)) return false;
+            try
+            {
+                using (FileStream stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
+                {
+                    stream.Close();
+                }
+            }
+            catch (IOException)
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private static string GetModsFolderPath() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "mods");
